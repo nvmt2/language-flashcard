@@ -25,13 +25,12 @@ class LockscreenModule : Module() {
     Function("start") { mode: String ->
       LockscreenPrefs.setEnabled(context, true, mode)
       context.startForegroundService(Intent(context, LockscreenService::class.java))
-      appContext.currentActivity?.let { LockscreenActivityListener().onResume(it) }
     }
 
     Function("stop") {
       LockscreenPrefs.setEnabled(context, false)
       context.stopService(Intent(context, LockscreenService::class.java))
-      appContext.currentActivity?.let { LockscreenActivityListener().onResume(it) }
+      appContext.currentActivity?.let { LockscreenActivityListener.clear(it) }
     }
 
     Function("isRunning") { LockscreenService.running }
@@ -49,7 +48,10 @@ class LockscreenModule : Module() {
     }
 
     Function("dismiss") {
-      appContext.currentActivity?.moveTaskToBack(true)
+      appContext.currentActivity?.let {
+        LockscreenActivityListener.clear(it)
+        it.moveTaskToBack(true)
+      }
     }
 
     Function("getPermissions") {

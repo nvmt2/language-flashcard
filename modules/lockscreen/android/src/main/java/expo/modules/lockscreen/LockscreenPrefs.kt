@@ -26,6 +26,21 @@ internal object LockscreenPrefs {
   fun lastScreenOnAt(ctx: Context) = prefs(ctx).getLong("lastScreenOnAt", 0L)
   fun setLastScreenOnAt(ctx: Context, at: Long) = prefs(ctx).edit().putLong("lastScreenOnAt", at).apply()
 
+  /**
+   * One-shot ticket set by the service on SCREEN_ON. The activity may show over the
+   * keyguard only when it consumes a fresh ticket, so normal launches never bypass the lock.
+   */
+  fun setPendingShow(ctx: Context, at: Long) = prefs(ctx).edit().putLong("pendingShowAt", at).apply()
+
+  fun consumePendingShow(ctx: Context): Boolean {
+    val at = prefs(ctx).getLong("pendingShowAt", 0L)
+    if (at == 0L) return false
+    prefs(ctx).edit().remove("pendingShowAt").apply()
+    return System.currentTimeMillis() - at < PENDING_SHOW_TTL_MS
+  }
+
+  private const val PENDING_SHOW_TTL_MS = 10_000L
+
   fun lastError(ctx: Context) = prefs(ctx).getString("lastError", null)
   fun setLastError(ctx: Context, error: String?) = prefs(ctx).edit().putString("lastError", error).apply()
 

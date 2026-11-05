@@ -13,24 +13,37 @@ class LockscreenPackage : Package {
 }
 
 /**
- * Lets MainActivity appear over the keyguard while the feature is enabled.
- * SPIKE: applied to the whole activity; the final version should only do this
- * when the activity is opened from the SCREEN_ON path.
+ * Lets MainActivity appear over the keyguard only right after the service's SCREEN_ON
+ * (one-shot ticket in LockscreenPrefs). Normal launches never show over the lock, and the
+ * flag is cleared as soon as the activity leaves the foreground.
  */
 class LockscreenActivityListener : ReactActivityLifecycleListener {
   override fun onCreate(activity: Activity?, savedInstanceState: Bundle?) {
-    activity?.let { apply(it) }
+    activity?.let { allowIfTicket(it) }
   }
 
   override fun onResume(activity: Activity) {
-    apply(activity)
+    allowIfTicket(activity)
     activity.getSystemService(NotificationManager::class.java)?.cancel(LockscreenService.ID_CARD)
   }
 
-  private fun apply(activity: Activity) {
+  override fun onPause(activity: Activity) {
+    clear(activity)
+  }
+
+  private fun allowIfTicket(activity: Activity) {
     if (!LockscreenModule.supported) return
-    val enabled = LockscreenPrefs.isEnabled(activity)
-    activity.setShowWhenLocked(enabled)
-    activity.setTurnScreenOn(enabled)
+    if (LockscreenPrefs.isEnabled(activity) && LockscreenPrefs.consumePendingShow(activity)) {
+      activity.setShowWhenLocked(true)
+      activity.setTurnScreenOn(true)
+    }
+  }
+
+  companion object {
+    fun clear(activity: Activity) {
+      if (!LockscreenModule.supported) return
+      activity.setShowWhenLocked(false)
+      activity.setTurnScreenOn(false)
+    }
   }
 }
