@@ -69,7 +69,7 @@ class LockscreenService : Service() {
     val now = System.currentTimeMillis()
     LockscreenPrefs.setLastScreenOnAt(this, now)
     LockscreenPrefs.setPendingShow(this, now)
-    LockscreenActivityListener.allowCurrent()
+    LockscreenActivityListener.allowCurrent(this)
     val mode = LockscreenPrefs.mode(this)
     Log.i(TAG, "SCREEN_ON at $now, mode=$mode")
     try {
@@ -78,6 +78,7 @@ class LockscreenService : Service() {
       LockscreenPrefs.setLastError(this, null)
     } catch (e: Exception) {
       Log.e(TAG, "failed to open lockscreen", e)
+      LockscreenActivityListener.clearCurrent()
       LockscreenPrefs.setLastError(this, "${e.javaClass.simpleName}: ${e.message}")
     }
   }

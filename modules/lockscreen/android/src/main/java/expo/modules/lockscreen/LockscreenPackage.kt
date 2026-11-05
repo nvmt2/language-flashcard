@@ -4,6 +4,8 @@ import android.app.Activity
 import android.app.NotificationManager
 import android.content.Context
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import java.lang.ref.WeakReference
 import expo.modules.core.interfaces.Package
 import expo.modules.core.interfaces.ReactActivityLifecycleListener
@@ -28,11 +30,13 @@ class LockscreenActivityListener : ReactActivityLifecycleListener {
 
   override fun onResume(activity: Activity) {
     current = WeakReference(activity)
+    resumed = true
     allowIfTicket(activity)
     activity.getSystemService(NotificationManager::class.java)?.cancel(LockscreenService.ID_CARD)
   }
 
   override fun onPause(activity: Activity) {
+    resumed = false
     clear(activity)
   }
 
@@ -54,10 +58,28 @@ class LockscreenActivityListener : ReactActivityLifecycleListener {
     @Volatile
     private var current: WeakReference<Activity>? = null
 
-    /** Called by the service on SCREEN_ON (main thread), before startActivity. */
-    fun allowCurrent() {
-      current?.get()?.let { allow(it) }
+    @Volatile
+    private var resumed = false
+    private val handler = Handler(Looper.getMainLooper())
+
+    /**
+     * Called by the service on SCREEN_ON (main thread), before startActivity.
+     * Fail-closed: if the card has not come to the foreground within the TTL
+     * (launch blocked, user ignored it), the flag is revoked again.
+     */
+    fun allowCurrent(ctx: Context) {
+      if (!LockscreenModule.supported || !LockscreenPrefs.isEnabled(ctx)) return
+      val activity = current?.get() ?: return
+      allow(activity)
+      handler.postDelayed({ if (!resumed) clear(activity) }, REVOKE_AFTER_MS)
     }
+
+    /** Called by the service when the launch failed. */
+    fun clearCurrent() {
+      current?.get()?.let { clear(it) }
+    }
+
+    private const val REVOKE_AFTER_MS = 5_000L
 
     private fun allow(activity: Activity) {
       activity.setShowWhenLocked(true)
