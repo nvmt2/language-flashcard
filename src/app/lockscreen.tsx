@@ -1,11 +1,11 @@
 import { router, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, AppState, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PhraseCard } from '@/components/PhraseCard';
-import { dismissLockscreen } from '@/lib/lockscreenBridge';
+import { dismissLockscreen, msSinceScreenOn, nativeLockscreenEnabled } from '@/lib/lockscreenBridge';
 import { notify } from '@/lib/notify';
 import { useSpeech } from '@/lib/useSpeech';
 import { usePhraseStore } from '@/store/PhraseStore';
@@ -34,12 +34,27 @@ export default function LockscreenScreen() {
     }
   }, [store]);
 
+  // SPIKE (#15): how long after SCREEN_ON the card became visible.
+  const [latencyMs, setLatencyMs] = useState<number | null>(() => msSinceScreenOn());
+
   useEffect(() => {
     if (store.ready && !started.current) {
       started.current = true;
       next();
     }
   }, [store.ready, next]);
+
+  // With the native feature on, the card stays mounted behind the keyguard after
+  // dismiss(); show a fresh phrase each time the screen brings it back.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state !== 'active' || !nativeLockscreenEnabled()) return;
+      translateY.setValue(0);
+      setLatencyMs(msSinceScreenOn());
+      next();
+    });
+    return () => sub.remove();
+  }, [next, translateY]);
 
   const close = useCallback(() => {
     Animated.timing(translateY, { toValue: -1000, duration: 180, useNativeDriver: true }).start(() =>
@@ -118,7 +133,9 @@ export default function LockscreenScreen() {
             </View>
           )}
 
-          <Text style={styles.swipeHint}>Vuốt lên để đóng</Text>
+          <Text style={styles.swipeHint}>
+            Vuốt lên để đóng{latencyMs != null ? `  ·  ⏱ ${latencyMs} ms` : ''}
+          </Text>
         </SafeAreaView>
       </Animated.View>
     </View>

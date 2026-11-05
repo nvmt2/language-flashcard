@@ -20,6 +20,7 @@ export default function RootLayout() {
         <Stack.Screen name="lockscreen" options={{ headerShown: false }} />
         <Stack.Screen name="edit/[id]" options={{ title: 'Câu' }} />
         <Stack.Screen name="settings" options={{ title: 'Cài đặt' }} />
+        <Stack.Screen name="spike" options={{ title: 'Spike lockscreen' }} />
       </Stack>
       <AutoShowLockscreen />
     </PhraseStoreProvider>

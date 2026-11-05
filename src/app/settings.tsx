@@ -1,5 +1,8 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+
+import { isSupported } from '../../modules/lockscreen';
 
 import { choose, confirm, notify } from '@/lib/notify';
 import { pickJsonText, shareJson } from '@/lib/transfer';
@@ -122,6 +125,7 @@ export default function SettingsScreen() {
       </Section>
 
       <Section title="Khác">
+        {isSupported() && <Button label="🧪 Spike: màn hình khóa" onPress={() => router.push('/spike')} />}
         <Button label="♻️ Khôi phục bộ câu mẫu" onPress={resetSeed} disabled={busy} danger />
         <Text style={styles.note}>Hiện có {store.data.phrases.length} câu.</Text>
       </Section>
