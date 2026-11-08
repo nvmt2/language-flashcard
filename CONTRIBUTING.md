@@ -10,7 +10,7 @@ Branch, commit và PR title dùng chung một danh sách type:
 |------|----------|
 | `feat` | Feature mới hoặc thay đổi hành vi người dùng thấy được |
 | `fix` | Sửa bug |
-| `docs` | Chỉ sửa tài liệu (`README.md`, `docs/`, `CONTRIBUTING.md`, `AGENTS.md`...) |
+| `docs` | Chỉ sửa tài liệu trong repo (`README.md`, `CONTRIBUTING.md`, `AGENTS.md`...) |
 | `style` | Format hoặc chỉnh giao diện, không đổi logic |
 | `refactor` | Đổi code nhưng không sửa bug, không thêm feature |
 | `test` | Thêm hoặc sửa test |
@@ -45,6 +45,23 @@ staging ──► feat/24-spaced-repetition ──PR (squash)──► staging �
 Repo bật **Automatically delete head branches**: sau khi PR merge, GitHub tự xóa branch nguồn (head) của PR, không bao giờ xóa branch đích (base). Vì vậy **không bao giờ dùng `staging` làm head của PR**, nếu không `staging` sẽ bị xóa. Lỡ bị xóa thì bấm **Restore branch** trong trang PR đã merge.
 
 Branch đã merge thì không commit tiếp lên nó. Việc mới luôn là branch mới từ `staging`.
+
+## Tài liệu
+
+Tài liệu dự án (spec, thiết kế, kế hoạch, checklist QA, ghi chú quyết định) **không lưu trong repo**, không dùng thư mục `docs/`. Mỗi tài liệu là một GitHub issue:
+
+- Title bắt đầu bằng `[Docs]`, ví dụ `[Docs] Spec: Lockscreen English – thiết kế`. Gắn label `documentation`, thêm label phase hoặc vùng liên quan nếu có.
+- Nội dung issue là bản chính. Sửa tài liệu thì sửa trực tiếp nội dung issue, không tạo bản mới. Thay đổi lớn thì thêm comment ghi ngắn gọn đã đổi gì.
+- Tài liệu còn dùng (spec, kiến trúc) thì để **mở**. Tài liệu chỉ còn giá trị lưu trữ (QA của phase đã xong) thì **đóng** với lý do *completed*.
+- Issue công việc và PR liên kết tới issue tài liệu bằng `#<number>`.
+- Trong repo chỉ giữ tài liệu cần đi cùng code: `README.md` (cách chạy, build, cài đặt, cấu trúc thư mục), `CONTRIBUTING.md`, `AGENTS.md`, `CLAUDE.md`.
+
+Tài liệu hiện có:
+
+| Issue | Nội dung |
+|-------|----------|
+| #25 | Spec thiết kế: kiến trúc, data model, native module, quyền Xiaomi |
+| #26 | QA Phase 1 (đã đóng) |
 
 ## Commit message
 
@@ -108,7 +125,7 @@ chore(build): add preview profile to eas.json
 
 - **Evidence:** chứng minh thay đổi chạy đúng. Tối thiểu dán kết quả `npm test`, `npm run typecheck` và `npm run lint`. Thay đổi UI thì kèm screenshot hoặc video. Sửa native code (`modules/`), `app.json` hoặc thêm thư viện native thì phải build bằng EAS và test trên điện thoại thật (Xiaomi 15T), ghi rõ profile đã build. Bước nào không kiểm tra thì ghi rõ và nói lý do.
 - **Refer:** ghi `Closes #<number>` nếu PR hoàn thành issue, `Refs #<number>` nếu chỉ liên quan. Không có issue thì xóa dòng đó. Lưu ý `Closes` chỉ tự đóng issue khi PR merge vào default branch (`main`), nên khi PR merge vào `staging` thì tự đóng issue bằng tay.
-- **Tài liệu:** đổi kiến trúc, data model, luồng dữ liệu hoặc native module thì cập nhật spec trong `docs/superpowers/specs/`. Đổi cách chạy, build, cài đặt hoặc cấu trúc thư mục thì cập nhật `README.md`. Thêm checklist test trên máy thì ghi vào `docs/qa/`.
+- **Tài liệu:** đổi kiến trúc, data model, luồng dữ liệu hoặc native module thì cập nhật issue spec (#25). Checklist test trên máy thì tạo issue `[Docs] QA ...`. Đổi cách chạy, build, cài đặt hoặc cấu trúc thư mục thì cập nhật `README.md`. Xem mục Tài liệu.
 - **Kích thước:** mỗi PR chỉ một feature hoặc một fix. Thay đổi không liên quan thì tách PR riêng.
 
 ## Versioning
@@ -146,3 +163,5 @@ Chỉ release khi chủ repo quyết định. Trước đó mọi thay đổi ch
 ## Làm việc với Claude
 
 Claude đọc file này qua `AGENTS.md`. Khi nhờ Claude tạo branch, commit hay mở PR (ví dụ "commit giúp tôi", "mở PR cho thay đổi này"), Claude phải theo đúng các quy tắc trên.
+
+Skill nào mặc định ghi spec hoặc plan ra file (ví dụ `superpowers:brainstorming` ghi vào `docs/superpowers/specs/`, `superpowers:writing-plans` ghi vào `docs/superpowers/plans/`) thì Claude tạo hoặc cập nhật issue `[Docs]` thay vì ghi file vào repo.

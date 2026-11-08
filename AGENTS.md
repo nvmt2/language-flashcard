@@ -47,3 +47,4 @@ Khi tạo branch, commit, mở PR hay release, theo đúng [`CONTRIBUTING.md`](C
 - Branch `<type>/<issue>-<short-description>`, luôn tạo từ `staging` mới nhất.
 - Commit và PR title theo Conventional Commits, tiếng Anh, có scope của repo.
 - PR mở vào `staging` (chỉ PR release vào `main`), description theo `.github/pull_request_template.md`, không thêm footer tự sinh.
+- Tài liệu (spec, plan, QA) là GitHub issue `[Docs]` có label `documentation`, không ghi file vào `docs/`. Kể cả khi một skill bảo lưu spec/plan ra file.
