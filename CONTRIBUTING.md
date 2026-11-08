@@ -36,7 +36,7 @@ Branch do bot tạo (`claude/...`, `dependabot/...`) được miễn.
 | Branch | Vai trò |
 |--------|---------|
 | `staging` | Branch làm việc chung. Mọi branch feature, fix, docs... tạo từ đây và mở PR vào đây. |
-| `main` | Chỉ chứa code đã release. Chỉ nhận PR release (nhánh `chore/release-vX.Y.Z` tạo từ `staging`, xem mục Release). Không mở PR feature thẳng vào `main`. |
+| `main` | Chỉ chứa code đã release. Mỗi lần có code mới vào `main`, Expo tự build APK. Chỉ nhận PR release (nhánh `chore/release-vX.Y.Z` tạo từ `staging`, xem mục Release). Không mở PR feature thẳng vào `main`. |
 
 ```
 staging ──► feat/24-spaced-repetition ──PR (squash)──► staging ──► chore/release-vX.Y.Z ──PR release (merge commit)──► main + tag vX.Y.Z
@@ -153,7 +153,7 @@ Chỉ release khi chủ repo quyết định. Trước đó mọi thay đổi ch
    ```
    Merge bằng **Create a merge commit**, không squash, để `main` giữ đủ từng commit của `staging`. GitHub tự xóa `chore/release-vX.Y.Z` sau khi merge.
 4. **Sau khi PR release được merge**, tạo annotated tag `vX.Y.Z` trên merge commit ở `main` và tạo GitHub Release cùng tên tag.
-5. **Build APK** từ `main` bằng profile `preview` (`npx eas-cli@latest build -p android --profile preview`) và dán link build vào GitHub Release.
+5. **Lấy link APK:** Expo đã cấu hình build trigger trên `main`, nên khi PR release merge vào `main` thì EAS **tự build**, không chạy build tay. Vào expo.dev → project `language-flashcard` → Builds, chờ build của merge commit đó xong rồi dán link vào GitHub Release. Build lỗi thì sửa bằng PR `fix` vào `staging` rồi release bản PATCH, không push thẳng lên `main`.
 6. **Release notes** ngắn, mỗi mục một dòng, gom theo nhóm:
    - `Tính năng mới`: các commit `feat`.
    - `Sửa lỗi`: các commit `fix`.
