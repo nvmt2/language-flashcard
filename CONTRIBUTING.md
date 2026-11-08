@@ -42,6 +42,8 @@ Branch do bot tạo (`claude/...`, `dependabot/...`) được miễn.
 staging ──► feat/24-spaced-repetition ──PR (squash)──► staging ──► chore/release-vX.Y.Z ──PR release (merge commit)──► main + tag vX.Y.Z
 ```
 
+**Branch mặc định của repo là `staging`**: PR mới tự chọn base `staging`, và `Closes #N` tự đóng issue khi PR merge vào `staging`. Chỉ PR release mới phải chọn base `main` (`gh pr create --base main`).
+
 Repo bật **Automatically delete head branches**: sau khi PR merge, GitHub tự xóa branch nguồn (head) của PR, không bao giờ xóa branch đích (base). Vì vậy **không bao giờ dùng `staging` làm head của PR**, nếu không `staging` sẽ bị xóa. Lỡ bị xóa thì bấm **Restore branch** trong trang PR đã merge.
 
 Branch đã merge thì không commit tiếp lên nó. Việc mới luôn là branch mới từ `staging`.
@@ -124,9 +126,16 @@ chore(build): add preview profile to eas.json
   ```
 
 - **Evidence:** chứng minh thay đổi chạy đúng. Tối thiểu dán kết quả `npm test`, `npm run typecheck` và `npm run lint`. Thay đổi UI thì kèm screenshot hoặc video. Sửa native code (`modules/`), `app.json` hoặc thêm thư viện native thì phải build bằng EAS và test trên điện thoại thật (Xiaomi 15T), ghi rõ profile đã build. Bước nào không kiểm tra thì ghi rõ và nói lý do.
-- **Refer:** ghi `Closes #<number>` nếu PR hoàn thành issue, `Refs #<number>` nếu chỉ liên quan. Không có issue thì xóa dòng đó. Lưu ý `Closes` chỉ tự đóng issue khi PR merge vào default branch (`main`), nên khi PR merge vào `staging` thì tự đóng issue bằng tay.
+- **Refer:** ghi `Closes #<number>` nếu PR hoàn thành issue, `Refs #<number>` nếu chỉ liên quan. Không có issue thì xóa dòng đó. Xem mục Đóng issue.
 - **Tài liệu:** đổi kiến trúc, data model, luồng dữ liệu hoặc native module thì cập nhật issue spec (#25). Checklist test trên máy thì tạo issue `[Docs] QA ...`. Đổi cách chạy, build, cài đặt hoặc cấu trúc thư mục thì cập nhật `README.md`. Xem mục Tài liệu.
 - **Kích thước:** mỗi PR chỉ một feature hoặc một fix. Thay đổi không liên quan thì tách PR riêng.
+
+## Đóng issue
+
+- **Issue công việc** (feature, bug, chore…) đóng khi PR làm xong việc của nó **merge vào `staging`**. PR ghi `Closes #<number>` thì GitHub tự đóng, không cần đóng tay. Mỗi issue một dòng `Closes` riêng, ví dụ `Closes #3, Closes #4`.
+- Nếu issue còn bước chưa làm được trong PR (ví dụ test trên Xiaomi 15T sau khi có APK), PR ghi `Refs #<number>` và để issue mở. Khi bước còn lại xong thì comment kết quả rồi đóng tay với lý do *completed*.
+- Issue không làm nữa thì đóng với lý do *not planned* và comment ngắn lý do.
+- **Issue tài liệu `[Docs]`** đóng theo mục Tài liệu: còn dùng thì để mở, chỉ còn giá trị lưu trữ thì đóng.
 
 ## Versioning
 
