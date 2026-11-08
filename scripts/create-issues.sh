@@ -3,7 +3,7 @@
 # Dùng: ./scripts/create-issues.sh owner/repo
 set -euo pipefail
 REPO="${1:?Usage: $0 owner/repo}"
-SPEC="docs/superpowers/specs/2026-11-05-lockscreen-english-design.md"
+SPEC_URL="https://github.com/nvmt2/language-flashcard/issues/25"
 
 # Chỉ dùng REST API (gh api) để chạy được cả ở môi trường chặn GraphQL.
 # Chạy lại nhiều lần cũng an toàn: label được cập nhật, milestone/issue đã có thì bỏ qua.
@@ -23,7 +23,7 @@ EXISTING_TITLES="$(gh api --paginate "repos/$REPO/issues?state=all&per_page=100"
 issue() { # title labels(comma) milestone  (body từ stdin)
   local body; body="$(cat)"
   if grep -Fxq -- "$1" <<<"$EXISTING_TITLES"; then echo "↷ bỏ qua (đã có): $1"; return; fi
-  body="$body"$'\n\n'"📄 Spec: [\`$SPEC\`](https://github.com/$REPO/blob/main/$SPEC)"
+  body="$body"$'\n\n'"📄 Spec: $SPEC_URL"
   local args=(-f title="$1" -f body="$body" -F milestone="$(milestone_number "$3")")
   local l; IFS=',' read -ra ls <<<"$2"; for l in "${ls[@]}"; do args+=(-f "labels[]=$l"); done
   gh api "repos/$REPO/issues" "${args[@]}" --jq '"#\(.number) \(.title)"'
