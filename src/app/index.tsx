@@ -42,9 +42,14 @@ export default function HomeScreen() {
       <Stack.Screen
         options={{
           headerRight: () => (
-            <Pressable hitSlop={12} accessibilityLabel="Cài đặt" onPress={() => router.push('/settings')}>
-              <Text style={styles.headerIcon}>⚙️</Text>
-            </Pressable>
+            <View style={styles.headerActions}>
+              <Pressable hitSlop={12} accessibilityLabel="Hộp thư" onPress={() => router.push('/inbox')}>
+                <Text style={styles.headerIcon}>📥</Text>
+              </Pressable>
+              <Pressable hitSlop={12} accessibilityLabel="Cài đặt" onPress={() => router.push('/settings')}>
+                <Text style={styles.headerIcon}>⚙️</Text>
+              </Pressable>
+            </View>
           ),
         }}
       />
@@ -121,6 +126,7 @@ function Row({ phrase }: { phrase: Phrase }) {
 const styles = StyleSheet.create({
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
   root: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: 16 },
+  headerActions: { flexDirection: 'row', gap: 20 },
   headerIcon: { fontSize: 22 },
   stats: { color: colors.muted, fontSize: 14, marginTop: 4 },
   study: {

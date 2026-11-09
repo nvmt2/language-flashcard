@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
+import { InboxUrlForm } from '@/components/InboxUrlForm';
 import { LockscreenSettings } from '@/components/LockscreenSettings';
 import { isSupported } from '../../modules/lockscreen';
+import { BUILD_INBOX_URL } from '@/lib/inbox';
 import { choose, confirm, notify } from '@/lib/notify';
 import { pickJsonText, shareJson } from '@/lib/transfer';
 import { usePhraseStore } from '@/store/PhraseStore';
@@ -120,6 +122,15 @@ export default function SettingsScreen() {
           <LockscreenSettings />
         </Section>
       )}
+
+      <Section title="Hộp thư từ PC">
+        <InboxUrlForm />
+        <Text style={styles.note}>
+          {BUILD_INBOX_URL
+            ? 'Để trống để dùng URL mặc định của bản build. Nhập URL khác để ghi đè.'
+            : 'Dán địa chỉ resource MockAPI, ví dụ https://<project-id>.mockapi.io/api/v1/inbox.'}
+        </Text>
+      </Section>
 
       <Section title="Dữ liệu">
         <Button label="📤 Xuất file JSON" onPress={exportData} disabled={busy} />
