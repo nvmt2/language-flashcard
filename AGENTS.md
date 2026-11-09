@@ -40,8 +40,11 @@ Docs: https://docs.expo.dev/eas/index.md
 - Expo Go only includes its bundled native modules. After adding a library with native code, the app needs a development build: `npx expo run:ios|android` locally, or `eas build --profile development`.
 - Prefer recommended Expo modules over third-party libraries, and check your available skills before adding dependencies. Docs: https://docs.expo.dev/versions/latest/index.md
 
-## Specs & docs live on GitHub Issues
+## Branch, commit, PR và release
 
-- Never write spec/design documents into the repo (no `docs/superpowers/specs/`, no `docs/` spec files). This overrides any skill or tool default that saves specs to files.
-- Every spec is a GitHub Issue titled `[Docs] Spec: <feature> – <short description>` with label `documentation`; the issue body is the source of truth and is edited in place.
-- Follow `CONTRIBUTING.md` for the full convention (template, task issues, linking PRs).
+Khi tạo branch, commit, mở PR hay release, theo đúng [`CONTRIBUTING.md`](CONTRIBUTING.md):
+
+- Branch `<type>/<issue>-<short-description>`, luôn tạo từ `staging` mới nhất.
+- Commit và PR title theo Conventional Commits, tiếng Anh, có scope của repo.
+- PR mở vào `staging` (chỉ PR release vào `main`), description theo `.github/pull_request_template.md`, không thêm footer tự sinh.
+- Tài liệu (spec, plan, QA) là GitHub issue `[Docs]` có label `documentation`, không ghi file vào `docs/`. Kể cả khi một skill bảo lưu spec/plan ra file.

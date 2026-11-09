@@ -5,7 +5,7 @@ App Android (Expo / React Native) hiện **thẻ học cụm từ & mẫu câu t
 - Giai đoạn 1: toàn bộ tính năng chạy trên **Expo Go** (JSON + AsyncStorage, không database)
 - Giai đoạn 2: native module Kotlin để hiện thẻ trên lock screen thật (Xiaomi HyperOS)
 
-📄 Spec: nằm trên GitHub Issues, label `documentation` (spec gốc: #25, PC Inbox: #29). Quy ước xem [`CONTRIBUTING.md`](CONTRIBUTING.md).
+📄 Spec: [#25](https://github.com/nvmt2/language-flashcard/issues/25). Mọi tài liệu là issue có label [`documentation`](https://github.com/nvmt2/language-flashcard/issues?q=label%3Adocumentation)
 🗂️ Việc cần làm: xem GitHub Issues (milestone *Phase 1* / *Phase 2*).
 
 ## Chạy thử (Phase 1)
@@ -67,4 +67,4 @@ src/lib/            # TTS, share/import file, dialog, cầu nối lockscreen
 src/data/seed.json  # 50 câu mẫu
 ```
 
-QA: [`docs/qa/phase-1.md`](docs/qa/phase-1.md)
+QA Phase 1: [#26](https://github.com/nvmt2/language-flashcard/issues/26)
