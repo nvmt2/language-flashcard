@@ -56,14 +56,51 @@ npx eas-cli@latest build -p android --profile preview   # APK độc lập, khô
 
 **Đã biết (để sau):** trên Xiaomi 15T thẻ có thể chỉ hiện sau khi mở khóa, chưa đè lên màn hình khóa. Xem #15.
 
+## Hộp thư từ PC
+
+Gửi từ mới từ PC (app bôi đen có AI) vào một **hộp thư chung** trên MockAPI, rồi chọn từ cần học ở màn **📥 Hộp thư** trên điện thoại. Thiết kế: [#29](https://github.com/nvmt2/language-flashcard/issues/29).
+
+### 1. Tạo hộp thư trên MockAPI
+
+1. Tạo project trên mockapi.io, rồi tạo resource tên **`inbox`**.
+2. Schema: `phrase`, `meaning`, `example`, `exampleVi` (String), `tags` (Array), `createdAt` (Date). Xóa các field mẫu khác (`name`, `avatar`…) và **bỏ generator Faker của `createdAt`**, nếu không MockAPI sẽ tự điền ngày ngẫu nhiên khi thiếu.
+3. Không tạo bản ghi mẫu. URL của hộp thư có dạng `https://<project-id>.mockapi.io/api/v1/inbox`.
+
+⚠️ Ai có URL là đọc, ghi, xóa được hộp thư. Repo này public: **không dán URL vào code, issue hay PR**.
+
+### 2. Gửi từ từ PC
+
+App bôi đen gửi `POST <URL>` với body JSON theo [hợp đồng ở #29, mục 3](https://github.com/nvmt2/language-flashcard/issues/29): `phrase` và `meaning` bắt buộc; `example`, `exampleVi`, `tags` tùy chọn; nên có `createdAt` (ISO 8601) để chia nhóm Hôm nay / Cũ hơn.
+
+```bash
+curl -X POST "$INBOX_URL" -H "Content-Type: application/json" -d '{"phrase":"ubiquitous","meaning":"có mặt ở khắp nơi","createdAt":"2026-11-09T03:00:00Z"}'
+```
+
+### 3. Cấu hình URL cho app
+
+App lấy URL theo thứ tự: **URL nhập trong app** (Cài đặt → Hộp thư từ PC) → **`EXPO_PUBLIC_INBOX_URL` lúc build** → chưa có thì màn Hộp thư hiện form để dán URL.
+
+- **Chạy local:** tạo file `.env.local` (đã được git ignore) rồi chạy lại `npx expo start`:
+  ```
+  EXPO_PUBLIC_INBOX_URL=https://<project-id>.mockapi.io/api/v1/inbox
+  ```
+  Không đặt trong `.env` (cũng đã ignore, nhưng `.env.local` là chỗ dành cho giá trị riêng của máy bạn).
+- **Build EAS:** lưu biến trên EAS một lần, mỗi lần build sẽ tự nạp. Profile `development` đọc env `development`, `preview` đọc `preview`, `production` đọc `production`:
+  ```bash
+  npx eas-cli@latest env:set --name EXPO_PUBLIC_INBOX_URL --value "https://<project-id>.mockapi.io/api/v1/inbox" --visibility sensitive --environment development --environment preview --environment production
+  ```
+  Dùng visibility `sensitive` hoặc `plaintext`. Biến `secret` **không** được nạp vào bản build.
+
+⚠️ Biến `EXPO_PUBLIC_*` được nhúng thẳng vào APK. Không đưa APK lên chỗ công khai.
+
 ## Cấu trúc
 
 ```
-src/app/            # màn hình (Expo Router): index, lockscreen, edit/[id], settings
-src/components/     # PhraseCard, AutoShowLockscreen
+src/app/            # màn hình (Expo Router): index, lockscreen, edit/[id], settings, inbox
+src/components/     # PhraseCard, AutoShowLockscreen, InboxUrlForm
 src/store/          # PhraseStore (context), phrases (AsyncStorage + thao tác), validate (import/export)
-src/logic/          # picker (chọn câu), search
-src/lib/            # TTS, share/import file, dialog, cầu nối lockscreen
+src/logic/          # picker (chọn câu), search, inbox (chia nhóm, lọc trùng từ hộp thư)
+src/lib/            # TTS, share/import file, dialog, cầu nối lockscreen, client hộp thư MockAPI
 src/data/seed.json  # 50 câu mẫu
 ```
 

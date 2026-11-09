@@ -90,6 +90,7 @@ Theo [Conventional Commits](https://www.conventionalcommits.org), viết bằng 
   | `picker` | Thuật toán chọn câu (`src/logic/picker.ts`) |
   | `import` | Xuất/nhập JSON (`src/store/validate.ts`, `src/lib/transfer.ts`) |
   | `speech` | Đọc phát âm (`src/lib/useSpeech.ts`) |
+  | `inbox` | Hộp thư từ PC: `src/app/inbox.tsx`, `src/lib/inbox.ts`, `src/logic/inbox.ts`, `InboxUrlForm` |
   | `data` | Bộ câu mẫu `src/data/seed.json`, file nhập `data/*.json` |
   | `build` | `app.json`, `eas.json`, config plugin |
   | `claude` | `.claude/`, `CLAUDE.md`, `AGENTS.md` |
