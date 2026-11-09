@@ -7,6 +7,7 @@ App Android (Expo / React Native) hiện **thẻ học cụm từ & mẫu câu t
 
 📄 Spec: [#25](https://github.com/nvmt2/language-flashcard/issues/25). Mọi tài liệu là issue có label [`documentation`](https://github.com/nvmt2/language-flashcard/issues?q=label%3Adocumentation)
 🗂️ Việc cần làm: xem GitHub Issues (milestone *Phase 1* / *Phase 2*).
+🎨 Prototype bấm thử được (để trình bày với khách hàng): [Lockscreen English – Prototype](https://claude.ai/artifact/LxnvVpQWq2AVapiWW2SHWw). Gồm thẻ học, màn chính, hộp thư từ PC, cài đặt và thêm câu; dữ liệu mẫu, không gọi mạng.
 
 ## Chạy thử (Phase 1)
 
