@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import seed from '@/data/seed.json';
-import { ImportMode, mergeImport, normalizeList, normalizePhrase } from '@/store/validate';
+import { phraseKey } from '@/logic/inbox';
+import { ImportMode, mergeImport, newId, normalizeList, normalizePhrase } from '@/store/validate';
 import { AppData, DATA_VERSION, DEFAULT_SETTINGS, Phrase, PhraseStatus, RECENT_LIMIT, Settings } from '@/types';
 
 export const STORAGE_KEY = 'lockscreen-english/data';
@@ -44,6 +45,7 @@ export function migrate(raw: unknown, now: string = nowIso()): AppData {
     settings: {
       autoShowOnOpen:
         typeof settings.autoShowOnOpen === 'boolean' ? settings.autoShowOnOpen : DEFAULT_SETTINGS.autoShowOnOpen,
+      inboxUrl: typeof settings.inboxUrl === 'string' ? settings.inboxUrl.trim() : DEFAULT_SETTINGS.inboxUrl,
     },
     recentIds: Array.isArray(r.recentIds)
       ? r.recentIds.filter((x): x is string => typeof x === 'string' && ids.has(x)).slice(-RECENT_LIMIT)
@@ -99,6 +101,25 @@ function validated(input: PhraseInput, base: Partial<Phrase>, now: string): Phra
 export function addPhrase(data: AppData, input: PhraseInput, now: string = nowIso()): { data: AppData; phrase: Phrase } {
   const phrase = validated(input, { createdAt: now }, now);
   return { data: { ...data, phrases: [...data.phrases, phrase] }, phrase };
+}
+
+/**
+ * Appends already-normalized phrases in one change (inbox import). Phrases whose text is
+ * already on the phone (same phraseKey) or repeated in the batch are skipped.
+ */
+export function addPhrases(data: AppData, incoming: Phrase[]): { data: AppData; added: Phrase[] } {
+  const keys = new Set(data.phrases.map((p) => phraseKey(p.phrase)));
+  const ids = new Set(data.phrases.map((p) => p.id));
+  const added: Phrase[] = [];
+  for (const p of incoming) {
+    const key = phraseKey(p.phrase);
+    if (keys.has(key)) continue;
+    keys.add(key);
+    const phrase = ids.has(p.id) ? { ...p, id: newId() } : p;
+    ids.add(phrase.id);
+    added.push(phrase);
+  }
+  return { data: added.length ? { ...data, phrases: [...data.phrases, ...added] } : data, added };
 }
 
 export function updatePhrase(data: AppData, id: string, input: PhraseInput, now: string = nowIso()): AppData {

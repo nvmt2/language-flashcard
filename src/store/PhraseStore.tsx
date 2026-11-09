@@ -3,7 +3,7 @@ import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, 
 import { markSeen, pick } from '@/logic/picker';
 import * as ops from '@/store/phrases';
 import { ImportMode } from '@/store/validate';
-import { AppData, Phrase, PhraseStatus, Settings } from '@/types';
+import { AppData, DEFAULT_SETTINGS, Phrase, PhraseStatus, Settings } from '@/types';
 
 interface PhraseStore {
   ready: boolean;
@@ -12,6 +12,8 @@ interface PhraseStore {
   recoveredFromCorrupt: boolean;
   dismissRecoveryNotice: () => void;
   add: (input: ops.PhraseInput) => Promise<Phrase>;
+  /** Adds normalized phrases in one write, skipping ones already on the phone. Returns those added. */
+  addPhrases: (phrases: Phrase[]) => Promise<Phrase[]>;
   update: (id: string, input: ops.PhraseInput) => Promise<void>;
   remove: (id: string) => Promise<void>;
   setStatus: (id: string, status: PhraseStatus) => Promise<void>;
@@ -22,7 +24,7 @@ interface PhraseStore {
   showNext: () => Promise<Phrase | null>;
 }
 
-const EMPTY: AppData = { version: 1, phrases: [], settings: { autoShowOnOpen: true }, recentIds: [] };
+const EMPTY: AppData = { version: 1, phrases: [], settings: { ...DEFAULT_SETTINGS }, recentIds: [] };
 
 const Ctx = createContext<PhraseStore | null>(null);
 
@@ -73,6 +75,11 @@ export function PhraseStoreProvider({ children }: { children: ReactNode }) {
         const r = ops.addPhrase(latest.current, input);
         await commit(r.data);
         return r.phrase;
+      },
+      addPhrases: async (phrases) => {
+        const r = ops.addPhrases(latest.current, phrases);
+        if (r.added.length) await commit(r.data);
+        return r.added;
       },
       update: (id, input) => commit(ops.updatePhrase(latest.current, id, input)),
       remove: (id) => commit(ops.deletePhrase(latest.current, id)),

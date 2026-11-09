@@ -5,6 +5,7 @@ import {
   STORAGE_KEY,
   ValidationError,
   addPhrase,
+  addPhrases,
   createSeedData,
   deletePhrase,
   importPhrases,
@@ -16,7 +17,7 @@ import {
   updatePhrase,
   updateSettings,
 } from '@/store/phrases';
-import { AppData } from '@/types';
+import { AppData, Phrase } from '@/types';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -62,8 +63,20 @@ describe('migrate', () => {
 
   it('repairs settings and drops unknown recent ids', () => {
     const out = migrate({ version: 1, phrases: [{ id: 'a', phrase: 'x', meaning: 'y' }], recentIds: ['a', 'zz', 3] }, NOW);
-    expect(out.settings).toEqual({ autoShowOnOpen: true });
+    expect(out.settings).toEqual({ autoShowOnOpen: true, inboxUrl: '' });
     expect(out.recentIds).toEqual(['a']);
+  });
+
+  it('adds inboxUrl to settings saved before the inbox existed, keeping the rest', () => {
+    const out = migrate({ version: 1, phrases: [], settings: { autoShowOnOpen: false }, recentIds: [] }, NOW);
+    expect(out.settings).toEqual({ autoShowOnOpen: false, inboxUrl: '' });
+  });
+
+  it('keeps a stored inboxUrl and drops a non-string one', () => {
+    const keep = migrate({ version: 1, phrases: [], settings: { inboxUrl: ' https://x.test/inbox ' } }, NOW);
+    expect(keep.settings.inboxUrl).toBe('https://x.test/inbox');
+    const bad = migrate({ version: 1, phrases: [], settings: { inboxUrl: 42 } }, NOW);
+    expect(bad.settings.inboxUrl).toBe('');
   });
 
   it.each([[null], [[]], [{ version: 99, phrases: [] }], [{ version: 1 }]])('throws on %p', (raw) => {
@@ -119,5 +132,40 @@ describe('pure operations', () => {
     const out = importPhrases(base(), incoming, 'replace');
     expect(out.phrases.map((p) => p.id)).toEqual(['z']);
     expect(out.recentIds).toEqual([]);
+  });
+});
+
+describe('addPhrases', () => {
+  const phrase = (id: string, text: string): Phrase => ({
+    id,
+    phrase: text,
+    meaning: 'm',
+    status: 'learning',
+    seenCount: 0,
+    createdAt: NOW,
+  });
+  const base = (): AppData => ({ ...createSeedData(NOW), phrases: [phrase('p1', 'Break the ice')] });
+
+  it('appends new phrases in one change', () => {
+    const r = addPhrases(base(), [phrase('n1', 'alpha'), phrase('n2', 'beta')]);
+    expect(r.added.map((p) => p.phrase)).toEqual(['alpha', 'beta']);
+    expect(r.data.phrases.map((p) => p.phrase)).toEqual(['Break the ice', 'alpha', 'beta']);
+  });
+
+  it('skips phrases already on the phone and duplicates in the batch', () => {
+    const r = addPhrases(base(), [phrase('n1', ' break  THE ice'), phrase('n2', 'Alpha'), phrase('n3', 'alpha')]);
+    expect(r.added.map((p) => p.id)).toEqual(['n2']);
+    expect(r.data.phrases).toHaveLength(2);
+  });
+
+  it('re-ids a phrase whose id is already taken', () => {
+    const r = addPhrases(base(), [phrase('p1', 'gamma')]);
+    expect(r.added[0].id).not.toBe('p1');
+    expect(new Set(r.data.phrases.map((p) => p.id)).size).toBe(2);
+  });
+
+  it('returns the same data object when nothing is added', () => {
+    const data = base();
+    expect(addPhrases(data, [phrase('n1', 'break the ice')]).data).toBe(data);
   });
 });

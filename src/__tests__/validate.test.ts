@@ -143,14 +143,14 @@ describe('buildExport', () => {
     const data = {
       version: 1 as const,
       phrases: [make()],
-      settings: { autoShowOnOpen: true },
+      settings: { autoShowOnOpen: true, inboxUrl: '' },
       recentIds: ['x1'],
     };
     expect(buildExport(data)).toEqual({ version: 1, phrases: [make()] });
   });
 
   it('round-trips through parseImport', () => {
-    const data = { version: 1 as const, phrases: [make()], settings: { autoShowOnOpen: true }, recentIds: [] };
+    const data = { version: 1 as const, phrases: [make()], settings: { autoShowOnOpen: true, inboxUrl: '' }, recentIds: [] };
     const r = parseImport(JSON.stringify(buildExport(data)), NOW);
     expect(r.valid).toEqual([make()]);
   });

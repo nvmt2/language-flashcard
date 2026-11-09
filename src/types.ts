@@ -15,6 +15,8 @@ export interface Phrase {
 
 export interface Settings {
   autoShowOnOpen: boolean;
+  /** Inbox URL entered in the app. '' means "use the build-time default" (see src/lib/inbox.ts). */
+  inboxUrl: string;
 }
 
 export const DATA_VERSION = 1 as const;
@@ -29,4 +31,4 @@ export interface AppData {
 
 export const RECENT_LIMIT = 5;
 
-export const DEFAULT_SETTINGS: Settings = { autoShowOnOpen: true };
+export const DEFAULT_SETTINGS: Settings = { autoShowOnOpen: true, inboxUrl: '' };

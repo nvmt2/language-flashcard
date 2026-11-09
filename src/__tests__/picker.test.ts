@@ -71,7 +71,7 @@ describe('markSeen', () => {
   const base = (): AppData => ({
     version: 1,
     phrases: [p('a'), p('b')],
-    settings: { autoShowOnOpen: true },
+    settings: { autoShowOnOpen: true, inboxUrl: '' },
     recentIds: [],
   });
 
