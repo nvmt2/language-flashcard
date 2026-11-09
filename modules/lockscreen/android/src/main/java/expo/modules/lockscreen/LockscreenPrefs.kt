@@ -28,23 +28,30 @@ internal object LockscreenPrefs {
   fun setLastScreenOnAt(ctx: Context, at: Long) = prefs(ctx).edit().putLong("lastScreenOnAt", at).apply()
 
   /**
-   * One-shot ticket set by the service on SCREEN_ON, bound to the launch intent by a random
-   * in-memory nonce. The activity may show over the keyguard only when its intent carries
-   * that nonce and the card deep link, so other apps / normal launches never bypass the lock.
+   * One-shot ticket set by the service on SCREEN_OFF / SCREEN_ON, bound to the launch intent
+   * by a random in-memory nonce. The activity may show over the keyguard only when its intent
+   * carries that nonce and the card deep link, so other apps / normal launches never bypass
+   * the lock. `wake` says whether the launch may turn the screen on (false on SCREEN_OFF,
+   * otherwise the screen would come straight back on).
    */
   @Volatile private var pendingNonce: String? = null
   @Volatile private var pendingAt = 0L
+  @Volatile private var pendingWake = false
 
-  fun setPendingShow(at: Long) {
+  fun setPendingShow(at: Long, wake: Boolean) {
     pendingNonce = UUID.randomUUID().toString()
     pendingAt = at
+    pendingWake = wake
   }
 
-  fun consumePendingShow(intent: Intent?): Boolean {
-    val nonce = pendingNonce ?: return false
-    if (intent?.getStringExtra(EXTRA_NONCE) != nonce || intent.dataString != DEEP_LINK) return false
+  fun hasPendingShow() = pendingNonce != null
+
+  /** Null when the intent carries no valid ticket, otherwise the ticket's `wake` flag. */
+  fun consumePendingShow(intent: Intent?): Boolean? {
+    val nonce = pendingNonce ?: return null
+    if (intent?.getStringExtra(EXTRA_NONCE) != nonce || intent.dataString != DEEP_LINK) return null
     pendingNonce = null
-    return System.currentTimeMillis() - pendingAt < PENDING_SHOW_TTL_MS
+    return if (System.currentTimeMillis() - pendingAt < PENDING_SHOW_TTL_MS) pendingWake else null
   }
 
   private const val PENDING_SHOW_TTL_MS = 10_000L
@@ -57,5 +64,6 @@ internal object LockscreenPrefs {
     Intent(Intent.ACTION_VIEW, Uri.parse(DEEP_LINK))
       .setPackage(ctx.packageName)
       .putExtra(EXTRA_NONCE, pendingNonce)
-      .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+      // NO_ANIMATION: no window open animation over the keyguard.
+      .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_NO_ANIMATION)
 }
