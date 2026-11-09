@@ -5,9 +5,9 @@ import { Animated, AppState, BackHandler, PanResponder, Pressable, StyleSheet, T
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PhraseCard } from '@/components/PhraseCard';
+import { notifyCardShown } from '@/lib/bootCover';
 import { dismissLockscreen, ensureUnlocked, isPhoneLocked, nativeLockscreenEnabled } from '@/lib/lockscreenBridge';
 import { notify } from '@/lib/notify';
-import { hideSplash } from '@/lib/splash';
 import { useSpeech } from '@/lib/useSpeech';
 import { usePhraseStore } from '@/store/PhraseStore';
 import { colors, radius } from '@/theme';
@@ -43,9 +43,9 @@ export default function LockscreenScreen() {
     }
   }, [store.ready, next]);
 
-  // Cold start: drop the splash only once the first card is on screen.
+  // Start or reopen: drop the splash and the boot cover only once the first card is on screen.
   useEffect(() => {
-    if (loaded) hideSplash();
+    if (loaded) notifyCardShown();
   }, [loaded]);
 
   // With the native feature on, the card stays mounted behind the keyguard after
