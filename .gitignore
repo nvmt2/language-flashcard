@@ -41,3 +41,6 @@ example
 # generated native folders
 /ios
 /android
+
+# Never commit env files with real values (inbox URL etc.). Use .env.local.
+.env
