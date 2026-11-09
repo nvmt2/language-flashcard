@@ -65,6 +65,7 @@ Tài liệu hiện có:
 | #25 | Spec thiết kế: kiến trúc, data model, native module, quyền Xiaomi |
 | #26 | QA Phase 1 (đã đóng) |
 | #29 | Spec PC Inbox: thêm từ từ PC qua hộp thư chung (MockAPI) |
+| #36 | QA PC Inbox trên Xiaomi 15T |
 
 ## Commit message
 
