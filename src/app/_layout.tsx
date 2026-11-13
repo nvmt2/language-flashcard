@@ -30,6 +30,7 @@ export default function RootLayout() {
         <Stack.Screen name="edit/[id]" options={{ title: 'Câu' }} />
         <Stack.Screen name="settings" options={{ title: 'Cài đặt' }} />
         <Stack.Screen name="inbox" options={{ title: 'Hộp thư' }} />
+        <Stack.Screen name="graduated" options={{ title: 'Đã tốt nghiệp' }} />
       </Stack>
       <AutoShowLockscreen />
       <LockedRouteGuard />

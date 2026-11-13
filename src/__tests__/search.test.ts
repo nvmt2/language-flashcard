@@ -28,5 +28,16 @@ test('status filter', () => {
 });
 
 test('countByStatus', () => {
-  expect(countByStatus(list)).toEqual({ learning: 1, mastered: 1 });
+  expect(countByStatus(list)).toEqual({ learning: 1, mastered: 1, graduated: 0 });
+});
+
+test('graduated phrases stay out of the home list, even under "all"', () => {
+  const withGrad = [...list, p('3', 'Bite the bullet', 'Cắn răng', 'graduated')];
+  expect(filterPhrases(withGrad, '', 'all').map((x) => x.id)).toEqual(['1', '2']);
+  expect(filterPhrases(withGrad, 'bullet', 'all')).toEqual([]);
+});
+
+test('countByStatus counts graduated phrases separately', () => {
+  const withGrad = [...list, p('3', 'Bite the bullet', 'Cắn răng', 'graduated')];
+  expect(countByStatus(withGrad)).toEqual({ learning: 1, mastered: 1, graduated: 1 });
 });

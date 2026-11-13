@@ -35,11 +35,20 @@ describe('pick', () => {
     expect(['a', 'b']).toContain(pick(phrases, ['a', 'b'], Math.random)?.id);
   });
 
-  it('chooses learning group when roll < 0.9 and mastered otherwise', () => {
+  it('chooses learning group when roll < 0.7 and mastered otherwise', () => {
     const phrases = [p('L'), p('M', { status: 'mastered' })];
     expect(pick(phrases, [], seq(0.5, 0))?.id).toBe('L');
-    expect(pick(phrases, [], seq(0.95, 0))?.id).toBe('M');
-    expect(MASTERED_CHANCE).toBeCloseTo(0.1);
+    expect(pick(phrases, [], seq(0.75, 0))?.id).toBe('M');
+    expect(MASTERED_CHANCE).toBeCloseTo(0.3);
+  });
+
+  it('never picks a graduated phrase', () => {
+    const phrases = [p('G', { status: 'graduated' }), p('L'), p('M', { status: 'mastered' })];
+    for (let i = 0; i < 500; i++) expect(pick(phrases, ['L', 'M'], Math.random)?.id).not.toBe('G');
+  });
+
+  it('returns null when every phrase has graduated', () => {
+    expect(pick([p('G', { status: 'graduated' })], [], Math.random)).toBeNull();
   });
 
   it('uses the other group when the chosen one is empty', () => {
@@ -57,19 +66,19 @@ describe('pick', () => {
     expect(newCount / N).toBeLessThan(0.96);
   });
 
-  it('roughly respects the 90/10 split', () => {
+  it('roughly respects the 70/30 split', () => {
     const phrases = [p('L'), p('M', { status: 'mastered' })];
     let m = 0;
     const N = 10000;
     for (let i = 0; i < N; i++) if (pick(phrases, [], Math.random)?.id === 'M') m++;
-    expect(m / N).toBeGreaterThan(0.07);
-    expect(m / N).toBeLessThan(0.13);
+    expect(m / N).toBeGreaterThan(0.26);
+    expect(m / N).toBeLessThan(0.34);
   });
 });
 
 describe('markSeen', () => {
   const base = (): AppData => ({
-    version: 1,
+    version: 2,
     phrases: [p('a'), p('b')],
     settings: { autoShowOnOpen: true, inboxUrl: '' },
     recentIds: [],

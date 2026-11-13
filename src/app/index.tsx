@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { notify } from '@/lib/notify';
+import { graduatedByWeek, QUIZ_TARGET } from '@/logic/quiz';
 import { countByStatus, filterPhrases, StatusFilter } from '@/logic/search';
 import { usePhraseStore } from '@/store/PhraseStore';
 import { colors, radius } from '@/theme';
@@ -21,6 +22,7 @@ export default function HomeScreen() {
 
   const counts = useMemo(() => countByStatus(data.phrases), [data.phrases]);
   const visible = useMemo(() => filterPhrases(data.phrases, query, filter), [data.phrases, query, filter]);
+  const weekCount = useMemo(() => graduatedByWeek(data.phrases).thisWeek, [data.phrases]);
 
   useEffect(() => {
     if (recoveredFromCorrupt) {
@@ -43,6 +45,9 @@ export default function HomeScreen() {
         options={{
           headerRight: () => (
             <View style={styles.headerActions}>
+              <Pressable hitSlop={12} accessibilityLabel="Đã tốt nghiệp" onPress={() => router.push('/graduated')}>
+                <Text style={styles.headerIcon}>🎓</Text>
+              </Pressable>
               <Pressable hitSlop={12} accessibilityLabel="Hộp thư" onPress={() => router.push('/inbox')}>
                 <Text style={styles.headerIcon}>📥</Text>
               </Pressable>
@@ -55,8 +60,13 @@ export default function HomeScreen() {
       />
 
       <Text style={styles.stats}>
-        {counts.learning} đang học · {counts.mastered} đã thuộc
+        {counts.learning} đang học · {counts.mastered} đã thuộc · {counts.graduated} tốt nghiệp
       </Text>
+
+      <Pressable style={styles.grad} onPress={() => router.push('/graduated')}>
+        <Text style={styles.gradText}>🎓 Tuần này tốt nghiệp {weekCount} từ</Text>
+        <Text style={styles.gradText}>›</Text>
+      </Pressable>
 
       <Pressable style={styles.study} onPress={() => router.push('/lockscreen')}>
         <Text style={styles.studyText}>🃏 Mở thẻ học</Text>
@@ -91,7 +101,11 @@ export default function HomeScreen() {
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           <Text style={styles.empty}>
-            {data.phrases.length === 0 ? 'Chưa có câu nào, bấm ➕ để thêm 🥲' : 'Không tìm thấy câu nào.'}
+            {data.phrases.length === 0
+              ? 'Chưa có câu nào, bấm ➕ để thêm 🥲'
+              : counts.learning + counts.mastered === 0
+                ? 'Tốt nghiệp hết rồi 🎓 Bấm ➕ để thêm từ mới.'
+                : 'Không tìm thấy câu nào.'}
           </Text>
         }
       />
@@ -117,7 +131,7 @@ function Row({ phrase }: { phrase: Phrase }) {
         </Text>
       </View>
       <Text style={[styles.badge, phrase.status === 'mastered' ? styles.badgeDone : styles.badgeLearning]}>
-        {phrase.status === 'mastered' ? 'Đã thuộc' : 'Đang học'}
+        {phrase.status === 'mastered' ? `Đã thuộc · ${phrase.quizStreak ?? 0}/${QUIZ_TARGET}` : 'Đang học'}
       </Text>
     </Pressable>
   );
@@ -129,6 +143,19 @@ const styles = StyleSheet.create({
   headerActions: { flexDirection: 'row', gap: 20 },
   headerIcon: { fontSize: 22 },
   stats: { color: colors.muted, fontSize: 14, marginTop: 4 },
+  grad: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#221D0E',
+    borderColor: '#4A3F1C',
+    borderWidth: 1,
+    borderRadius: radius,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginTop: 12,
+  },
+  gradText: { color: '#FFD166', fontSize: 15, fontWeight: '600' },
   study: {
     backgroundColor: colors.accent,
     borderRadius: radius,
