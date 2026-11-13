@@ -176,4 +176,6 @@ Chỉ release khi chủ repo quyết định. Trước đó mọi thay đổi ch
 
 Claude đọc file này qua `AGENTS.md`. Khi nhờ Claude tạo branch, commit hay mở PR (ví dụ "commit giúp tôi", "mở PR cho thay đổi này"), Claude phải theo đúng các quy tắc trên.
 
+Sau khi bàn xong một tính năng, bảo Claude "tạo ticket" thì Claude dùng skill `create-ticket` (`.claude/skills/create-ticket/SKILL.md`) để tạo issue đúng format, label và cách tách ticket của repo.
+
 Skill nào mặc định ghi spec hoặc plan ra file (ví dụ `superpowers:brainstorming` ghi vào `docs/superpowers/specs/`, `superpowers:writing-plans` ghi vào `docs/superpowers/plans/`) thì Claude tạo hoặc cập nhật issue `[Docs]` thay vì ghi file vào repo.
