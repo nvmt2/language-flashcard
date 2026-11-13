@@ -1,4 +1,5 @@
-import { AppData, DATA_VERSION, Phrase } from '@/types';
+import { QUIZ_TARGET } from '@/logic/quiz';
+import { AppData, DATA_VERSION, Phrase, PhraseStatus } from '@/types';
 
 export class ImportError extends Error {
   constructor(message: string) {
@@ -29,6 +30,9 @@ const isRecord = (x: unknown): x is Record<string, unknown> =>
 const nonEmpty = (x: unknown): string | undefined =>
   typeof x === 'string' && x.trim() !== '' ? x.trim() : undefined;
 
+const STATUSES: readonly PhraseStatus[] = ['learning', 'mastered', 'graduated'];
+const toStatus = (x: unknown): PhraseStatus => (STATUSES.includes(x as PhraseStatus) ? (x as PhraseStatus) : 'learning');
+
 const isIsoDate = (x: unknown): x is string =>
   typeof x === 'string' && !Number.isNaN(Date.parse(x));
 
@@ -43,7 +47,7 @@ export function normalizePhrase(input: unknown, now: string): Phrase | null {
     id: nonEmpty(input.id) ?? newId(),
     phrase,
     meaning,
-    status: input.status === 'mastered' ? 'mastered' : 'learning',
+    status: toStatus(input.status),
     seenCount:
       typeof input.seenCount === 'number' && Number.isFinite(input.seenCount) && input.seenCount > 0
         ? Math.floor(input.seenCount)
@@ -60,6 +64,12 @@ export function normalizePhrase(input: unknown, now: string): Phrase | null {
     if (tags.length) out.tags = tags;
   }
   if (isIsoDate(input.lastSeenAt)) out.lastSeenAt = input.lastSeenAt;
+
+  if (out.status === 'mastered' && typeof input.quizStreak === 'number' && Number.isFinite(input.quizStreak)) {
+    const streak = Math.min(Math.floor(input.quizStreak), QUIZ_TARGET - 1);
+    if (streak > 0) out.quizStreak = streak;
+  }
+  if (out.status === 'graduated') out.graduatedAt = isIsoDate(input.graduatedAt) ? input.graduatedAt : now;
 
   return out;
 }

@@ -1,14 +1,27 @@
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, AppState, BackHandler, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  Animated,
+  AppState,
+  BackHandler,
+  Keyboard,
+  KeyboardAvoidingView,
+  PanResponder,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PhraseCard } from '@/components/PhraseCard';
+import { QuizCard, QuizResult } from '@/components/QuizCard';
 import { notifyCardShown } from '@/lib/bootCover';
 import { dismissLockscreen, ensureUnlocked, isPhoneLocked, nativeLockscreenEnabled } from '@/lib/lockscreenBridge';
 import { notify } from '@/lib/notify';
 import { useSpeech } from '@/lib/useSpeech';
+import { graduatedByWeek, isCorrectAnswer, QUIZ_TARGET } from '@/logic/quiz';
 import { usePhraseStore } from '@/store/PhraseStore';
 import { colors, radius } from '@/theme';
 
@@ -23,11 +36,26 @@ export default function LockscreenScreen() {
   const started = useRef(false);
   const [loaded, setLoaded] = useState(false);
   const [translateY] = useState(() => new Animated.Value(0));
+  const [quizInput, setQuizInput] = useState('');
+  const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
+  const [quizTyped, setQuizTyped] = useState('');
 
   const current = store.data.phrases.find((p) => p.id === currentId) ?? null;
+  // Mastered phrases are quizzed; a phrase that just graduated keeps its quiz card until "Tiếp tục".
+  const isQuiz = !!current && current.status !== 'learning';
+  const streak = current?.status === 'graduated' ? QUIZ_TARGET : (current?.quizStreak ?? 0);
+  const weekCount = useMemo(() => graduatedByWeek(store.data.phrases).thisWeek, [store.data.phrases]);
+
+  const resetQuiz = () => {
+    setQuizInput('');
+    setQuizResult(null);
+    setQuizTyped('');
+  };
 
   const next = useCallback(async () => {
     setFlipped(false);
+    resetQuiz();
+    Keyboard.dismiss();
     try {
       const p = await store.showNext();
       setCurrentId(p?.id ?? null);
@@ -99,15 +127,45 @@ export default function LockscreenScreen() {
     [translateY, close],
   );
 
-  const toggleMastered = async () => {
+  const markMastered = async () => {
     if (!current) return;
-    const mastered = current.status === 'mastered';
     try {
-      await store.setStatus(current.id, mastered ? 'learning' : 'mastered');
-      if (!mastered) {
-        notify('Đã thuộc ✅');
-        await next();
-      }
+      await store.setStatus(current.id, 'mastered');
+      notify('Đã thuộc ✅ Lần sau sẽ kiểm tra bạn');
+      await next();
+    } catch {
+      notify('Không lưu được 😢');
+    }
+  };
+
+  const answer = async (correct: boolean, typed: string) => {
+    if (!current) return;
+    Keyboard.dismiss();
+    try {
+      const graduated = await store.answerQuiz(current.id, correct);
+      setQuizTyped(typed);
+      setQuizResult(graduated ? 'graduated' : correct ? 'correct' : 'wrong');
+    } catch {
+      notify('Không lưu được 😢');
+    }
+  };
+
+  const checkAnswer = () => {
+    if (!current || quizResult) return;
+    if (!quizInput.trim()) {
+      notify('Gõ gì đó đã nào ✍️');
+      return;
+    }
+    answer(isCorrectAnswer(quizInput, current.phrase), quizInput.trim());
+  };
+
+  const demote = async () => {
+    if (!current) return;
+    try {
+      await store.setStatus(current.id, 'learning');
+      resetQuiz();
+      Keyboard.dismiss();
+      notify('Đã chuyển về Đang học');
     } catch {
       notify('Không lưu được 😢');
     }
@@ -118,6 +176,7 @@ export default function LockscreenScreen() {
       <StatusBar hidden />
       <Animated.View style={[styles.fill, { transform: [{ translateY }] }]}>
         <SafeAreaView style={styles.fill}>
+          <KeyboardAvoidingView style={styles.fill} behavior="padding">
           <View style={styles.top}>
             <Text style={styles.brand}>Lockscreen English</Text>
             <Pressable onPress={close} hitSlop={16} accessibilityLabel="Đóng">
@@ -126,11 +185,26 @@ export default function LockscreenScreen() {
           </View>
 
           <View style={styles.center}>
-            {!loaded ? null : current ? (
+            {!loaded ? null : current && isQuiz ? (
+              <QuizCard
+                phrase={current}
+                streak={streak}
+                result={quizResult}
+                typed={quizTyped}
+                input={quizInput}
+                onChangeInput={setQuizInput}
+                onSubmit={checkAnswer}
+                weekCount={weekCount}
+              />
+            ) : current ? (
               <PhraseCard phrase={current} flipped={flipped} onFlip={() => setFlipped((f) => !f)} />
             ) : (
               <View style={styles.empty}>
-                <Text style={styles.emptyText}>Chưa có câu nào, thêm câu đi bạn ơi 🥲</Text>
+                <Text style={styles.emptyText}>
+                  {store.data.phrases.length
+                    ? 'Tốt nghiệp hết rồi 🎓 Thêm từ mới để học tiếp nhé!'
+                    : 'Chưa có câu nào, thêm câu đi bạn ơi 🥲'}
+                </Text>
                 <Pressable style={styles.primary} onPress={addPhrase}>
                   <Text style={styles.primaryText}>➕ Thêm câu</Text>
                 </Pressable>
@@ -138,7 +212,26 @@ export default function LockscreenScreen() {
             )}
           </View>
 
-          {current && (
+          {current && isQuiz && !quizResult && (
+            <View style={styles.quizActions}>
+              <View style={styles.actions}>
+                <ActionButton label="🤷 Không nhớ" onPress={() => answer(false, '')} />
+                <ActionButton label="Kiểm tra" onPress={checkAnswer} tone="primary" />
+              </View>
+              <Pressable onPress={demote} hitSlop={8}>
+                <Text style={styles.demote}>↩️ Chưa thuộc lắm, cho học lại</Text>
+              </Pressable>
+            </View>
+          )}
+
+          {current && isQuiz && quizResult && (
+            <View style={styles.actions}>
+              {canSpeak && <ActionButton label="🔊 Đọc" onPress={() => speak(current.phrase)} />}
+              <ActionButton label="Tiếp tục ▶" onPress={next} tone="primary" />
+            </View>
+          )}
+
+          {current && !isQuiz && (
             <View style={styles.actions}>
               {canSpeak && (
                 <ActionButton
@@ -146,16 +239,13 @@ export default function LockscreenScreen() {
                   onPress={() => speak(flipped && current.example ? `${current.phrase}. ${current.example}` : current.phrase)}
                 />
               )}
-              <ActionButton
-                label={current.status === 'mastered' ? '↩️ Chưa thuộc lắm' : '✅ Đã thuộc'}
-                onPress={toggleMastered}
-                tone={current.status === 'mastered' ? 'warn' : 'success'}
-              />
+              <ActionButton label="✅ Đã thuộc" onPress={markMastered} tone="success" />
               <ActionButton label="⏭️ Câu khác" onPress={next} />
             </View>
           )}
 
           <Text style={styles.swipeHint}>Vuốt lên để đóng</Text>
+          </KeyboardAvoidingView>
         </SafeAreaView>
       </Animated.View>
     </View>
@@ -169,17 +259,18 @@ function ActionButton({
 }: {
   label: string;
   onPress: () => void;
-  tone?: 'success' | 'warn';
+  tone?: 'success' | 'primary';
 }) {
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
         styles.action,
-        tone && { borderColor: colors[tone] },
+        tone === 'success' && { borderColor: colors.success },
+        tone === 'primary' && styles.actionPrimary,
         pressed && { opacity: 0.6 },
       ]}>
-      <Text style={styles.actionText}>{label}</Text>
+      <Text style={[styles.actionText, tone === 'primary' && styles.actionPrimaryText]}>{label}</Text>
     </Pressable>
   );
 }
@@ -201,6 +292,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   actionText: { color: colors.text, fontSize: 16, fontWeight: '600' },
+  actionPrimary: { backgroundColor: colors.accent, borderColor: colors.accent, paddingHorizontal: 24 },
+  actionPrimaryText: { color: colors.bg, fontWeight: '800' },
+  quizActions: { alignItems: 'center', gap: 6 },
+  demote: { color: colors.warn, fontSize: 14, fontWeight: '600', paddingVertical: 8 },
   swipeHint: { color: colors.muted, textAlign: 'center', paddingVertical: 20, fontSize: 13 },
   empty: { alignItems: 'center', gap: 20 },
   emptyText: { color: colors.text, fontSize: 18, textAlign: 'center' },

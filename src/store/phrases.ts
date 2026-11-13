@@ -3,7 +3,17 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import seed from '@/data/seed.json';
 import { phraseKey } from '@/logic/inbox';
 import { ImportMode, mergeImport, newId, normalizeList, normalizePhrase } from '@/store/validate';
-import { AppData, DATA_VERSION, DEFAULT_SETTINGS, Phrase, PhraseStatus, RECENT_LIMIT, Settings } from '@/types';
+import { QUIZ_TARGET } from '@/logic/quiz';
+import {
+  AppData,
+  DATA_VERSION,
+  DEFAULT_SETTINGS,
+  Phrase,
+  PhraseStatus,
+  RECENT_LIMIT,
+  Settings,
+  SUPPORTED_VERSIONS,
+} from '@/types';
 
 export const STORAGE_KEY = 'lockscreen-english/data';
 export const CORRUPT_PREFIX = 'lockscreen-english/corrupt-';
@@ -32,7 +42,7 @@ export function createSeedData(now: string = nowIso()): AppData {
 export function migrate(raw: unknown, now: string = nowIso()): AppData {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) throw new Error('Not an object');
   const r = raw as Record<string, unknown>;
-  if (r.version !== DATA_VERSION) throw new Error(`Unsupported data version: ${String(r.version)}`);
+  if (typeof r.version !== 'number' || !SUPPORTED_VERSIONS.includes(r.version)) throw new Error(`Unsupported data version: ${String(r.version)}`);
   if (!Array.isArray(r.phrases)) throw new Error('Missing phrases');
 
   const phrases = normalizeList(r.phrases, now).valid;
@@ -139,8 +149,45 @@ export function deletePhrase(data: AppData, id: string): AppData {
   };
 }
 
-export function setStatus(data: AppData, id: string, status: PhraseStatus): AppData {
-  return { ...data, phrases: data.phrases.map((p) => (p.id === id ? { ...p, status } : p)) };
+/** Drops quiz progress: a status change always starts the streak over. */
+function withStatus(p: Phrase, status: PhraseStatus, graduatedAt?: string): Phrase {
+  const { quizStreak: _s, graduatedAt: _g, ...rest } = p;
+  return graduatedAt ? { ...rest, status, graduatedAt } : { ...rest, status };
+}
+
+export function setStatus(data: AppData, id: string, status: PhraseStatus, now: string = nowIso()): AppData {
+  return {
+    ...data,
+    phrases: data.phrases.map((p) => (p.id === id ? withStatus(p, status, status === 'graduated' ? now : undefined) : p)),
+  };
+}
+
+/**
+ * Records a quiz answer on a mastered phrase. A wrong answer resets the streak;
+ * the QUIZ_TARGET-th correct answer in a row graduates the phrase.
+ */
+export function answerQuiz(
+  data: AppData,
+  id: string,
+  correct: boolean,
+  now: string = nowIso(),
+): { data: AppData; graduated: boolean } {
+  const p = data.phrases.find((x) => x.id === id);
+  if (!p || p.status !== 'mastered') return { data, graduated: false };
+
+  const streak = correct ? (p.quizStreak ?? 0) + 1 : 0;
+  const graduated = streak >= QUIZ_TARGET;
+  const next = graduated
+    ? withStatus(p, 'graduated', now)
+    : streak > 0
+      ? { ...p, quizStreak: streak }
+      : withStatus(p, 'mastered');
+  return { data: { ...data, phrases: data.phrases.map((x) => (x.id === id ? next : x)) }, graduated };
+}
+
+/** Sends a phrase (usually graduated) back to learning, from zero. */
+export function restorePhrase(data: AppData, id: string): AppData {
+  return setStatus(data, id, 'learning');
 }
 
 export function updateSettings(data: AppData, patch: Partial<Settings>): AppData {

@@ -9,11 +9,10 @@ interface Props {
   onFlip: () => void;
 }
 
-/** Big flashcard: shows the phrase; tap to reveal meaning and examples. */
+/** Big flashcard for a learning phrase: shows the phrase; tap to reveal meaning and examples. */
 export function PhraseCard({ phrase, flipped, onFlip }: Props) {
   return (
     <Pressable onPress={onFlip} style={styles.card} accessibilityRole="button" accessibilityHint="Chạm để lật thẻ">
-      {phrase.status === 'mastered' && <Text style={styles.badge}>ĐÃ THUỘC · ÔN LẠI</Text>}
       <Text style={styles.phrase} adjustsFontSizeToFit numberOfLines={4}>
         {phrase.phrase}
       </Text>
@@ -43,7 +42,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 20,
   },
-  badge: { color: colors.success, fontSize: 12, fontWeight: '700', letterSpacing: 1.5 },
   phrase: { color: colors.text, fontSize: 40, fontWeight: '800', lineHeight: 48 },
   hint: { color: colors.muted, fontSize: 14 },
   back: { gap: 12 },

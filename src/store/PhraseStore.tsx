@@ -3,7 +3,7 @@ import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, 
 import { markSeen, pick } from '@/logic/picker';
 import * as ops from '@/store/phrases';
 import { ImportMode } from '@/store/validate';
-import { AppData, DEFAULT_SETTINGS, Phrase, PhraseStatus, Settings } from '@/types';
+import { AppData, DATA_VERSION, DEFAULT_SETTINGS, Phrase, PhraseStatus, Settings } from '@/types';
 
 interface PhraseStore {
   ready: boolean;
@@ -17,6 +17,10 @@ interface PhraseStore {
   update: (id: string, input: ops.PhraseInput) => Promise<void>;
   remove: (id: string) => Promise<void>;
   setStatus: (id: string, status: PhraseStatus) => Promise<void>;
+  /** Records a quiz answer on a mastered phrase. Resolves true when the phrase just graduated. */
+  answerQuiz: (id: string, correct: boolean) => Promise<boolean>;
+  /** Sends a graduated phrase back to learning. */
+  restore: (id: string) => Promise<void>;
   updateSettings: (patch: Partial<Settings>) => Promise<void>;
   resetToSeed: () => Promise<void>;
   importPhrases: (incoming: Phrase[], mode: ImportMode) => Promise<void>;
@@ -24,7 +28,7 @@ interface PhraseStore {
   showNext: () => Promise<Phrase | null>;
 }
 
-const EMPTY: AppData = { version: 1, phrases: [], settings: { ...DEFAULT_SETTINGS }, recentIds: [] };
+const EMPTY: AppData = { version: DATA_VERSION, phrases: [], settings: { ...DEFAULT_SETTINGS }, recentIds: [] };
 
 const Ctx = createContext<PhraseStore | null>(null);
 
@@ -84,6 +88,12 @@ export function PhraseStoreProvider({ children }: { children: ReactNode }) {
       update: (id, input) => commit(ops.updatePhrase(latest.current, id, input)),
       remove: (id) => commit(ops.deletePhrase(latest.current, id)),
       setStatus: (id, status) => commit(ops.setStatus(latest.current, id, status)),
+      answerQuiz: async (id, correct) => {
+        const r = ops.answerQuiz(latest.current, id, correct);
+        await commit(r.data);
+        return r.graduated;
+      },
+      restore: (id) => commit(ops.restorePhrase(latest.current, id)),
       updateSettings: (patch) => commit(ops.updateSettings(latest.current, patch)),
       resetToSeed: () => commit(ops.resetToSeed(latest.current)),
       importPhrases: (incoming, mode) => commit(ops.importPhrases(latest.current, incoming, mode)),

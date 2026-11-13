@@ -6,12 +6,14 @@ import {
   ValidationError,
   addPhrase,
   addPhrases,
+  answerQuiz,
   createSeedData,
   deletePhrase,
   importPhrases,
   loadData,
   migrate,
   resetToSeed,
+  restorePhrase,
   saveData,
   setStatus,
   updatePhrase,
@@ -56,9 +58,21 @@ describe('loadData', () => {
 });
 
 describe('migrate', () => {
-  it('keeps valid version-1 data intact', () => {
+  it('keeps valid current data intact', () => {
     const data = createSeedData(NOW);
+    expect(data.version).toBe(2);
     expect(migrate(JSON.parse(JSON.stringify(data)), NOW)).toEqual(data);
+  });
+
+  it('upgrades version-1 data to version 2 without losing phrases', () => {
+    const out = migrate(
+      { version: 1, phrases: [{ id: 'a', phrase: 'x', meaning: 'y', status: 'mastered', seenCount: 4 }], recentIds: ['a'] },
+      NOW,
+    );
+    expect(out.version).toBe(2);
+    expect(out.phrases[0]).toMatchObject({ id: 'a', status: 'mastered', seenCount: 4 });
+    expect(out.phrases[0].quizStreak).toBeUndefined();
+    expect(out.recentIds).toEqual(['a']);
   });
 
   it('repairs settings and drops unknown recent ids', () => {
@@ -127,6 +141,15 @@ describe('pure operations', () => {
     expect(out.settings.autoShowOnOpen).toBe(false);
   });
 
+  it('setStatus resets quiz progress', () => {
+    let data = setStatus(base(), 'p001', 'mastered');
+    data = answerQuiz(data, 'p001', true, NOW).data;
+    data = setStatus(data, 'p001', 'learning');
+    const p = data.phrases.find((x) => x.id === 'p001')!;
+    expect(p.status).toBe('learning');
+    expect(p.quizStreak).toBeUndefined();
+  });
+
   it('importPhrases replace drops recent ids that no longer exist', () => {
     const incoming = [{ id: 'z', phrase: 'z', meaning: 'z', status: 'learning' as const, seenCount: 0, createdAt: NOW }];
     const out = importPhrases(base(), incoming, 'replace');
@@ -167,5 +190,56 @@ describe('addPhrases', () => {
   it('returns the same data object when nothing is added', () => {
     const data = base();
     expect(addPhrases(data, [phrase('n1', 'break the ice')]).data).toBe(data);
+  });
+});
+
+describe('answerQuiz', () => {
+  const LATER = '2026-11-13T09:00:00.000Z';
+  const base = (): AppData => setStatus(createSeedData(NOW), 'p001', 'mastered');
+  const get = (data: AppData) => data.phrases.find((x) => x.id === 'p001')!;
+
+  it('counts a correct answer', () => {
+    const r = answerQuiz(base(), 'p001', true, LATER);
+    expect(get(r.data).quizStreak).toBe(1);
+    expect(get(r.data).status).toBe('mastered');
+    expect(r.graduated).toBe(false);
+  });
+
+  it('graduates the phrase on the third correct answer in a row', () => {
+    let data = base();
+    data = answerQuiz(data, 'p001', true, LATER).data;
+    data = answerQuiz(data, 'p001', true, LATER).data;
+    const r = answerQuiz(data, 'p001', true, LATER);
+    expect(r.graduated).toBe(true);
+    expect(get(r.data)).toMatchObject({ status: 'graduated', graduatedAt: LATER });
+    expect(get(r.data).quizStreak).toBeUndefined();
+  });
+
+  it('resets the streak on a wrong answer', () => {
+    let data = base();
+    data = answerQuiz(data, 'p001', true, LATER).data;
+    data = answerQuiz(data, 'p001', true, LATER).data;
+    const r = answerQuiz(data, 'p001', false, LATER);
+    expect(get(r.data).quizStreak).toBeUndefined();
+    expect(get(r.data).status).toBe('mastered');
+    expect(r.graduated).toBe(false);
+  });
+
+  it('ignores phrases that are not mastered', () => {
+    const data = createSeedData(NOW);
+    expect(answerQuiz(data, 'p001', true, LATER).data).toBe(data);
+    expect(answerQuiz(data, 'nope', true, LATER).data).toBe(data);
+  });
+});
+
+describe('restorePhrase', () => {
+  it('sends a graduated phrase back to learning', () => {
+    let data = setStatus(createSeedData(NOW), 'p001', 'mastered');
+    for (let i = 0; i < 3; i++) data = answerQuiz(data, 'p001', true, NOW).data;
+    data = restorePhrase(data, 'p001');
+    const p = data.phrases.find((x) => x.id === 'p001')!;
+    expect(p.status).toBe('learning');
+    expect(p.quizStreak).toBeUndefined();
+    expect(p.graduatedAt).toBeUndefined();
   });
 });

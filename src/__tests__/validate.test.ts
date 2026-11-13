@@ -21,6 +21,29 @@ const make = (over: Partial<Phrase> = {}): Phrase => ({
 });
 
 describe('normalizePhrase', () => {
+  it('keeps a graduated phrase and its graduation date', () => {
+    const p = normalizePhrase({ phrase: 'a', meaning: 'b', status: 'graduated', graduatedAt: '2026-11-10T08:00:00.000Z' }, NOW);
+    expect(p).toMatchObject({ status: 'graduated', graduatedAt: '2026-11-10T08:00:00.000Z' });
+  });
+
+  it('dates a graduated phrase without a valid graduatedAt to now', () => {
+    const p = normalizePhrase({ phrase: 'a', meaning: 'b', status: 'graduated', graduatedAt: 'nope' }, NOW);
+    expect(p?.graduatedAt).toBe(NOW);
+  });
+
+  it('keeps a quiz streak only on mastered phrases, within 1–2', () => {
+    expect(normalizePhrase({ phrase: 'a', meaning: 'b', status: 'mastered', quizStreak: 2 }, NOW)?.quizStreak).toBe(2);
+    expect(normalizePhrase({ phrase: 'a', meaning: 'b', status: 'mastered', quizStreak: 9 }, NOW)?.quizStreak).toBe(2);
+    expect(normalizePhrase({ phrase: 'a', meaning: 'b', status: 'mastered', quizStreak: 0 }, NOW)?.quizStreak).toBeUndefined();
+    expect(normalizePhrase({ phrase: 'a', meaning: 'b', status: 'mastered', quizStreak: 'x' }, NOW)?.quizStreak).toBeUndefined();
+    expect(normalizePhrase({ phrase: 'a', meaning: 'b', status: 'learning', quizStreak: 2 }, NOW)?.quizStreak).toBeUndefined();
+  });
+
+  it('drops graduatedAt from phrases that are not graduated', () => {
+    const p = normalizePhrase({ phrase: 'a', meaning: 'b', status: 'mastered', graduatedAt: NOW }, NOW);
+    expect(p?.graduatedAt).toBeUndefined();
+  });
+
   it('fills defaults for a minimal phrase', () => {
     const p = normalizePhrase({ phrase: ' Hi ', meaning: 'Chào' }, NOW);
     expect(p).toMatchObject({
@@ -141,17 +164,22 @@ describe('mergeImport', () => {
 describe('buildExport', () => {
   it('exports version and phrases only', () => {
     const data = {
-      version: 1 as const,
+      version: 2 as const,
       phrases: [make()],
       settings: { autoShowOnOpen: true, inboxUrl: '' },
       recentIds: ['x1'],
     };
-    expect(buildExport(data)).toEqual({ version: 1, phrases: [make()] });
+    expect(buildExport(data)).toEqual({ version: 2, phrases: [make()] });
   });
 
   it('round-trips through parseImport', () => {
-    const data = { version: 1 as const, phrases: [make()], settings: { autoShowOnOpen: true, inboxUrl: '' }, recentIds: [] };
+    const phrases = [
+      make(),
+      make({ id: 'x2', status: 'mastered', quizStreak: 2 }),
+      make({ id: 'x3', status: 'graduated', graduatedAt: '2026-11-10T08:00:00.000Z' }),
+    ];
+    const data = { version: 2 as const, phrases, settings: { autoShowOnOpen: true, inboxUrl: '' }, recentIds: [] };
     const r = parseImport(JSON.stringify(buildExport(data)), NOW);
-    expect(r.valid).toEqual([make()]);
+    expect(r.valid).toEqual(phrases);
   });
 });

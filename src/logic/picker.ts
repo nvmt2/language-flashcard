@@ -1,7 +1,7 @@
 import { AppData, Phrase, RECENT_LIMIT } from '@/types';
 
 /** Probability of drawing from the mastered group (when both groups have phrases). */
-export const MASTERED_CHANCE = 0.1;
+export const MASTERED_CHANCE = 0.3;
 
 type Random = () => number;
 
@@ -18,10 +18,11 @@ function weightedPick(items: Phrase[], random: Random): Phrase {
 
 /**
  * Picks the next phrase to show:
- * skip recently shown ones, draw learning (90%) vs mastered (10%),
+ * never graduated ones, skip recently shown ones, draw learning (70%) vs mastered (30%),
  * then favour phrases that have been seen less.
  */
-export function pick(phrases: Phrase[], recentIds: string[], random: Random = Math.random): Phrase | null {
+export function pick(all: Phrase[], recentIds: string[], random: Random = Math.random): Phrase | null {
+  const phrases = all.filter((p) => p.status !== 'graduated');
   if (phrases.length === 0) return null;
 
   const recent = new Set(recentIds);
